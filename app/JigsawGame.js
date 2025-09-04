@@ -1,20 +1,20 @@
+"use client";
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Coins, RotateCcw, Info, History, Wallet, ArrowUpDown } from "lucide-react";
 import smile from "./images/smile.png";
 import cry from "./images/cry.png";
+
 // --- Utility: fair coin using crypto ---
 function fairFlip() {
-  const arr = new Uint32Array(1);
-  if (window.crypto && window.crypto.getRandomValues) {
+  if (typeof window !== "undefined" && window.crypto?.getRandomValues) {
+    const arr = new Uint32Array(1);
     window.crypto.getRandomValues(arr);
     return (arr[0] & 1) === 1; // true = heads, false = tails
   }
-  // Fallback (less secure)
   return Math.random() < 0.5;
 }
 
-// Format numbers to at most one decimal without trailing zeros beyond 1 decimal
 function fmt(n) {
   return Number(n.toFixed(2)).toString();
 }
@@ -22,28 +22,42 @@ function fmt(n) {
 const betOptions = [0.1, 0.5, 1];
 
 export default function CoinFlipGame() {
-  const [balance, setBalance] = useState(() => {
-    const saved = localStorage.getItem("cf-balance");
-    return saved ? parseFloat(saved) : 10;
-  });
+  const [balance, setBalance] = useState(10);
+  const [history, setHistory] = useState([]);
   const [selectedBet, setSelectedBet] = useState(betOptions[0]);
-  const [choice, setChoice] = useState("heads"); // "heads" | "tails"
+  const [choice, setChoice] = useState("heads");
   const [flipping, setFlipping] = useState(false);
-  const [result, setResult] = useState(null); // "heads" | "tails" | null
+  const [result, setResult] = useState(null);
   const [message, setMessage] = useState("");
-  const [history, setHistory] = useState(() => {
-    const saved = localStorage.getItem("cf-history");
-    return saved ? JSON.parse(saved) : [];
-  });
 
+  // Load từ localStorage (chỉ khi client)
   useEffect(() => {
-    localStorage.setItem("cf-balance", String(balance));
+    if (typeof window !== "undefined") {
+      const savedBalance = localStorage.getItem("cf-balance");
+      const savedHistory = localStorage.getItem("cf-history");
+      if (savedBalance) setBalance(parseFloat(savedBalance));
+      if (savedHistory) setHistory(JSON.parse(savedHistory));
+    }
+  }, []);
+
+  // Lưu balance
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("cf-balance", String(balance));
+    }
   }, [balance]);
+
+  // Lưu history
   useEffect(() => {
-    localStorage.setItem("cf-history", JSON.stringify(history.slice(0, 50)));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("cf-history", JSON.stringify(history.slice(0, 50)));
+    }
   }, [history]);
 
-  const canPlay = useMemo(() => !flipping && selectedBet > 0 && balance >= selectedBet, [flipping, selectedBet, balance]);
+  const canPlay = useMemo(
+    () => !flipping && selectedBet > 0 && balance >= selectedBet,
+    [flipping, selectedBet, balance]
+  );
 
   function play() {
     if (!canPlay) {
@@ -54,13 +68,10 @@ export default function CoinFlipGame() {
     setMessage("");
     setResult(null);
 
-    // Deduct bet up-front, pay out 2x on win
     setBalance(b => Number((b - selectedBet).toFixed(2)));
 
-    // Simulate flip duration ~1.6s
-    const flipTimer = setTimeout(() => {
-      const isHeads = fairFlip();
-      const outcome = isHeads ? "heads" : "tails";
+    setTimeout(() => {
+      const outcome = fairFlip() ? "heads" : "tails";
       setResult(outcome);
 
       const didWin = outcome === choice;
@@ -68,16 +79,12 @@ export default function CoinFlipGame() {
         const nb = didWin ? Number((b + selectedBet * 2).toFixed(2)) : b;
         return nb;
       });
-      setHistory(h => [{
-        ts: Date.now(),
-        choice,
-        bet: selectedBet,
-        outcome,
-        win: didWin
-      }, ...h].slice(0, 50));
-      setMessage(didWin ? `You Won +${fmt(selectedBet)}!` : `you lose -${fmt(selectedBet)}.`);
+      setHistory(h => [
+        { ts: Date.now(), choice, bet: selectedBet, outcome, win: didWin },
+        ...h,
+      ].slice(0, 50));
+      setMessage(didWin ? `Bạn thắng +${fmt(selectedBet)}!` : `Bạn thua -${fmt(selectedBet)}.`);
       setFlipping(false);
-      clearTimeout(flipTimer);
     }, 1600);
   }
 
@@ -88,7 +95,6 @@ export default function CoinFlipGame() {
     setResult(null);
   }
 
-  // Coin rotation amount grows when flipping
   const rotation = flipping ? 720 : result ? (result === "heads" ? 0 : 180) : 0;
 
   return (
@@ -101,18 +107,26 @@ export default function CoinFlipGame() {
           </div>
           <div>
             <h1 className="text-5xl font-semibold leading-tight">Coin Flip – Sentient</h1>
-            <p className="text-slate-300 text-sm">Choose bet 0.1 / 0.5 / 1 point · Select face · Flip to win x2</p>
+            <p className="text-slate-300 text-sm">
+              Choose bet 0.1 / 0.5 / 1 point · Select face · Flip to win x2
+            </p>
           </div>
         </div>
 
         {/* Top Bar */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           <div className="rounded-2xl bg-slate-800 p-4 shadow flex items-center justify-between">
-            <div className="flex items-center gap-2"><Wallet className="w-5 h-5"/><span className="text-slate-300 text-sm">Balance</span></div>
+            <div className="flex items-center gap-2">
+              <Wallet className="w-5 h-5"/>
+              <span className="text-slate-300 text-sm">Balance</span>
+            </div>
             <div className="text-xl font-bold">{fmt(balance)} pt</div>
           </div>
           <div className="rounded-2xl bg-slate-800 p-4 shadow flex items-center justify-between">
-            <div className="flex items-center gap-2"><ArrowUpDown className="w-5 h-5"/><span className="text-slate-300 text-sm">Bet</span></div>
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="w-5 h-5"/>
+              <span className="text-slate-300 text-sm">Bet</span>
+            </div>
             <div className="flex gap-2">
               {betOptions.map(b => (
                 <button
@@ -124,7 +138,10 @@ export default function CoinFlipGame() {
             </div>
           </div>
           <div className="rounded-2xl bg-slate-800 p-4 shadow flex items-center justify-between">
-            <div className="flex items-center gap-2"><History className="w-5 h-5"/><span className="text-slate-300 text-sm">Recent Games</span></div>
+            <div className="flex items-center gap-2">
+              <History className="w-5 h-5"/>
+              <span className="text-slate-300 text-sm">Recent Games</span>
+            </div>
             <div className="text-xl font-bold">{history.length}</div>
           </div>
         </div>
@@ -141,19 +158,11 @@ export default function CoinFlipGame() {
               >
                 {/* HEADS */}
                 <div className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-200 via-amber-300 to-amber-500 shadow-2xl border border-amber-700 flex items-center justify-center text-slate-900 font-extrabold text-3xl backface-hidden">
-                  <img
-              src={smile.src}
-              className="w-full h-full rounded-full"
-              alt="smile"
-            />
+                  <img src={smile.src} className="w-full h-full rounded-full" alt="smile"/>
                 </div>
                 {/* TAILS */}
                 <div className="absolute inset-0 rounded-full bg-gradient-to-br from-zinc-200 via-zinc-300 to-zinc-500 shadow-2xl border border-zinc-700 flex items-center justify-center text-slate-900 font-extrabold text-3xl [transform:rotateY(180deg)] backface-hidden">
-                  <img
-              src={cry.src}
-              className="w-full h-full rounded-full"
-              alt="cry"
-            />
+                  <img src={cry.src} className="w-full h-full rounded-full" alt="cry"/>
                 </div>
               </motion.div>
 
@@ -198,7 +207,9 @@ export default function CoinFlipGame() {
 
             {/* History */}
             <div className="bg-slate-900/40 border border-slate-700 rounded-2xl p-4 max-h-80 overflow-auto">
-              <div className="flex items-center gap-2 mb-2 text-slate-300"><History className="w-4 h-4"/>History (up to 50 games)</div>
+              <div className="flex items-center gap-2 mb-2 text-slate-300">
+                <History className="w-4 h-4"/>History (up to 50 games)
+              </div>
               {history.length === 0 ? (
                 <div className="text-slate-400 text-sm">No games yet. Try your luck!</div>
               ) : (
@@ -208,7 +219,7 @@ export default function CoinFlipGame() {
                       <div className="col-span-2 text-slate-200">{new Date(h.ts).toLocaleTimeString()}</div>
                       <div className="text-slate-300">Bet {fmt(h.bet)}</div>
                       <div className={`${h.win ? "text-emerald-300" : "text-rose-300"}`}>{h.win ? "+" : "-"}{fmt(h.bet)}</div>
-                      <div className="text-right text-slate-200">{h.outcome === "heads" ? "Smile" : "Cry  "}</div>
+                      <div className="text-right text-slate-200">{h.outcome === "heads" ? "Smile" : "Cry"}</div>
                     </li>
                   ))}
                 </ul>
@@ -226,10 +237,7 @@ export default function CoinFlipGame() {
         </div>
       </div>
 
-      {/* Extra styles for backface visibility */}
-      <style>{`
-        .backface-hidden{ backface-visibility: hidden; }
-      `}</style>
+      <style>{`.backface-hidden{ backface-visibility: hidden; }`}</style>
     </div>
   );
 }
