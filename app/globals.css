@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  width: 100%;
+  color: var(--foreground);
+  height: 100%;
+  background: var(--background);
+  font-family: Playpen Sans, cursive;
+}
+
+/* 3D rotate y-axis */
+.font-signature {
+  font-family: Dancing Script, cursive;
+}
