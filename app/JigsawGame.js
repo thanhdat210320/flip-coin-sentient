@@ -61,7 +61,7 @@ export default function CoinFlipGame() {
 
   function play() {
     if (!canPlay) {
-      setMessage(balance < selectedBet ? "Số dư không đủ." : "Đang lật... hãy đợi hoàn tất.");
+      setMessage(balance < selectedBet ? "Insufficient balance." : "Flipping... please wait for completion.");
       return;
     }
     setFlipping(true);
@@ -83,7 +83,7 @@ export default function CoinFlipGame() {
         { ts: Date.now(), choice, bet: selectedBet, outcome, win: didWin },
         ...h,
       ].slice(0, 50));
-      setMessage(didWin ? `Bạn thắng +${fmt(selectedBet)}!` : `Bạn thua -${fmt(selectedBet)}.`);
+      setMessage(didWin ? `You Win +${fmt(selectedBet)}!` : `You Lose -${fmt(selectedBet)}.`);
       setFlipping(false);
     }, 1600);
   }
@@ -229,7 +229,7 @@ export default function CoinFlipGame() {
 
           {/* Footer / Fairness */}
           <div className="mt-6 flex items-start gap-2 text-slate-300 text-xs">
-            <Info className="w-4 h-4 mt-0.5"/>
+            <Info className="w-4 h-4 mt-0.5 "/>
             <p>
               Game of chance, show that you are a prediction genius.
             </p>
